@@ -34,7 +34,7 @@ open class AppointmentView: UIView {
         
     private lazy var stackView: UIStackView = {
        let view = UIStackView()
-        view.layoutMargins = UIEdgeInsets(top: 0, left: 1, bottom: 0, right: 0)
+        view.layoutMargins = UIEdgeInsets(top: 1, left: 1, bottom: 0, right: 0)
         view.isLayoutMarginsRelativeArrangement = true
         view.isUserInteractionEnabled = false
         view.backgroundColor = .clear
@@ -114,34 +114,44 @@ open class AppointmentView: UIView {
     }
   }
 
-  public func updateWithDescriptor(event: EventDescriptor) {
-      let attributedText = NSMutableAttributedString()
-      let attributedSubject = NSAttributedString(string: event.text,attributes: subjectAttributes)
-      attributedText.append(attributedSubject)
-      
-      if let location = event.location {
-          let attributedLocation = NSAttributedString(string: location, attributes: locationAttributes)
-          attributedText.append(separator)
-          attributedText.append(attributedLocation)
-      }
-      
-      stactTextLabel.attributedText = attributedText
-      containerTextLabel.text = event.text
-      descriptor = event
-      backgroundColor = isZeroDuration ? .clear : event.backgroundColor
-      pointView.backgroundColor = event.color
-
-      color = isZeroDuration ? .clear : event.color
-      
-    eventResizeHandles.forEach{
-      $0.borderColor = event.color
-      $0.isHidden = event.editedEvent == nil
+    public func updateWithDescriptor(event: EventDescriptor) {
+        let attributedText = NSMutableAttributedString()
+        
+        let cancelledSubject = NSAttributedString(
+            string: event.text,
+            attributes: [.strikethroughStyle: NSUnderlineStyle.single.rawValue]
+        )
+         
+        let attributedSubject = NSAttributedString(string: event.text, attributes: subjectAttributes)
+        attributedText.append(event.isCancelledAppointment ? cancelledSubject : attributedSubject)
+        
+        if let location = event.location {
+            let attributedLocation = NSAttributedString(string: location, attributes: locationAttributes)
+            attributedText.append(separator)
+            attributedText.append(attributedLocation)
+        }
+        
+        stactTextLabel.attributedText = attributedText
+        containerTextLabel.text = event.text
+        descriptor = event
+        
+        setupViewStyle(with: CalendarResponse(rawValue: event.responseType),
+                       isCancelledAppointment: event.isCancelledAppointment)
+        
+        pointView.backgroundColor = event.color
+        
+        eventResizeHandles.forEach{
+            $0.borderColor = event.color
+            $0.isHidden = event.editedEvent == nil
+        }
+        drawsShadow = event.editedEvent != nil
+        
+        clipsToBounds = true
+        layer.cornerRadius = 2
+        setNeedsDisplay()
+        setNeedsLayout()
     }
-    drawsShadow = event.editedEvent != nil
-    setNeedsDisplay()
-    setNeedsLayout()
-  }
-  
+    
   public func animateCreation() {
     transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
     func scaleAnimation() {
@@ -300,4 +310,100 @@ open class AppointmentView: UIView {
       layer.shadowPath = UIBezierPath(rect: rect).cgPath
     }
   }
+    
+    private func setupBackgroundColor(_ responseType: CalendarResponse?,
+                                      _ isCancelledAppointment: Bool) -> UIColor {
+        if !isCancelledAppointment {
+            switch responseType {
+            case .unknown:              return .appBlue
+            case .organizer:            return .appBlue
+            case .tentative:            return .appBlue.withAlphaComponent(0.50).patternStripes(color2: .appBlue.withAlphaComponent(0.25))
+            case .accept:               return .appBlue.withAlphaComponent(0.75)
+            case .decline:              return .appBlue
+            case .noResponseReceived:   return .appBlue.withAlphaComponent(0.25)
+            case .requestNotSent:       return .appBlue.withAlphaComponent(0.25)
+            case .none:                 return .appBlue
+            }
+        } else {
+            return .appGray
+        }
+    }
+    
+    private func setupViewStyle(with responseType: CalendarResponse?,isCancelledAppointment: Bool) {
+        backgroundColor = setupBackgroundColor(responseType, isCancelledAppointment)
+        color = isZeroDuration ? .clear : setupBackgroundColor(responseType, isCancelledAppointment)
+        stactTextLabel.textColor = responseType == .requestNotSent ? .appRed : .label
+        
+        if responseType == .noResponseReceived ||
+            responseType == .requestNotSent,
+           !isCancelledAppointment {
+            setupDashedBorder(view: self)
+        }
+    }
+    
+    private func setupDashedBorder(view: UIView) {
+        let cornerRadius: CGFloat = 2
+        let dashWidth: CGFloat = 2
+        let dashColor: UIColor = .systemBlue.withAlphaComponent(0.75)
+        let dashLength: CGFloat = 5
+        let betweenDashesSpace: CGFloat = 5
+        let dashBorder = CAShapeLayer()
+        dashBorder.removeFromSuperlayer()
+        
+        view.layer.cornerRadius = cornerRadius
+        view.layer.masksToBounds = true
+        
+        dashBorder.lineWidth = dashWidth
+        dashBorder.strokeColor = dashColor.cgColor
+        dashBorder.lineDashPattern = [dashLength, betweenDashesSpace] as [NSNumber]
+        dashBorder.frame = view.bounds
+        dashBorder.fillColor = nil
+        dashBorder.path = UIBezierPath(roundedRect: view.bounds, cornerRadius: cornerRadius).cgPath
+        
+        view.layer.addSublayer(dashBorder)
+    }
+}
+
+extension UIColor {
+    
+    /// make a diagonal striped pattern
+    func patternStripes(color2: UIColor = .white, barThickness t: CGFloat = 3) -> UIColor {
+        let dim: CGFloat = t * 2.0 * sqrt(2.0)
+        
+        let img = UIGraphicsImageRenderer(size: .init(width: dim, height: dim)).image { context in
+            
+            // rotate the context and shift up
+            context.cgContext.rotate(by: CGFloat.pi / 4.0)
+            context.cgContext.translateBy(x: 0.0, y: -2.0 * t)
+            
+            let bars: [(UIColor,UIBezierPath)] = [
+                (self,  UIBezierPath(rect: .init(x: 0.0, y: 0.0, width: dim * 2.0, height: t))),
+                (color2,UIBezierPath(rect: .init(x: 0.0, y: t, width: dim * 2.0, height: t)))
+            ]
+            
+            bars.forEach {  $0.0.setFill(); $0.1.fill() }
+            
+            // move down and paint again
+            context.cgContext.translateBy(x: 0.0, y: 2.0 * t)
+            bars.forEach {  $0.0.setFill(); $0.1.fill() }
+        }
+        
+        return UIColor(patternImage: img)
+    }
+}
+
+extension UIColor {
+    static var appBlue = UIColor(red: 0/255, green: 128/255, blue: 255/255, alpha: 1)
+    static var appRed = UIColor(red: 233/255, green: 52/255, blue: 35/255, alpha: 1)
+    static var appGray: UIColor = {
+        return UIColor { (UITraitCollection: UITraitCollection) -> UIColor in
+            if UITraitCollection.userInterfaceStyle == .dark {
+                /// Return the color for Dark Mode
+                return .systemGray3
+            } else {
+                /// Return the color for Light Mode
+                return .systemGray6
+            }
+        }
+    }()
 }
