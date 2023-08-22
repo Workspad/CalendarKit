@@ -318,7 +318,7 @@ open class AppointmentView: UIView {
             case .unknown:              return .appBlue
             case .organizer:            return .appBlue
             case .tentative:            return .appBlue.withAlphaComponent(0.50).patternStripes(color2: .appBlue.withAlphaComponent(0.25))
-            case .accept:               return .appBlue.withAlphaComponent(0.75)
+            case .accept:               return .appBlue
             case .decline:              return .appBlue
             case .noResponseReceived:   return .appBlue.withAlphaComponent(0.25)
             case .requestNotSent:       return .appBlue.withAlphaComponent(0.25)
@@ -373,18 +373,19 @@ extension UIColor {
         let img = UIGraphicsImageRenderer(size: .init(width: dim, height: dim)).image { context in
             
             // rotate the context and shift up
+            context.cgContext.scaleBy(x: 1, y: -1)
             context.cgContext.rotate(by: CGFloat.pi / 4.0)
-            context.cgContext.translateBy(x: 0.0, y: -2.0 * t)
+            context.cgContext.translateBy(x: -t, y: -2.0 * t)
             
             let bars: [(UIColor,UIBezierPath)] = [
-                (self,  UIBezierPath(rect: .init(x: 0.0, y: 0.0, width: dim * 2.0, height: t))),
+                (self,  UIBezierPath(rect: .init(x: -t, y: 0.0, width: dim * 2.0, height: t))),
                 (color2,UIBezierPath(rect: .init(x: 0.0, y: t, width: dim * 2.0, height: t)))
             ]
             
             bars.forEach {  $0.0.setFill(); $0.1.fill() }
             
             // move down and paint again
-            context.cgContext.translateBy(x: 0.0, y: 2.0 * t)
+            context.cgContext.translateBy(x: -t, y: -2.0 * t)
             bars.forEach {  $0.0.setFill(); $0.1.fill() }
         }
         
