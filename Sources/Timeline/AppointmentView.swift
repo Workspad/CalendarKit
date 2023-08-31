@@ -315,14 +315,14 @@ open class AppointmentView: UIView {
                                       _ isCancelledAppointment: Bool) -> UIColor {
         if !isCancelledAppointment {
             switch responseType {
-            case .unknown:              return .appBlue
-            case .organizer:            return .appBlue
-            case .tentative:            return .appBlue.withAlphaComponent(0.50).patternStripes(color2: .appBlue.withAlphaComponent(0.25))
-            case .accept:               return .appBlue
-            case .decline:              return .appBlue
-            case .noResponseReceived:   return .appBlue.withAlphaComponent(0.25)
-            case .requestNotSent:       return .appBlue.withAlphaComponent(0.25)
-            case .none:                 return .appBlue
+            case .unknown:              return .appBlueOpacity75
+            case .organizer:            return .appBlueOpacity75
+            case .tentative:            return .appBlueOpacity75.patternStripes(color2: .appBlueOpacity50)
+            case .accept:               return .appBlueOpacity75
+            case .decline:              return .appBlueOpacity75
+            case .noResponseReceived:   return .appBlueOpacity25
+            case .requestNotSent:       return .appBlueOpacity25
+            case .none:                 return .appBlueOpacity75
             }
         } else {
             return .appGray
@@ -344,7 +344,7 @@ open class AppointmentView: UIView {
     private func setupDashedBorder(view: UIView) {
         let cornerRadius: CGFloat = 2
         let dashWidth: CGFloat = 2
-        let dashColor: UIColor = .systemBlue.withAlphaComponent(0.75)
+        let dashColor: UIColor = .appBlueOpacity75
         let dashLength: CGFloat = 5
         let betweenDashesSpace: CGFloat = 5
         let dashBorder = CAShapeLayer()
@@ -367,25 +367,26 @@ open class AppointmentView: UIView {
 extension UIColor {
     
     /// make a diagonal striped pattern
-    func patternStripes(color2: UIColor = .white, barThickness t: CGFloat = 3) -> UIColor {
-        let dim: CGFloat = t * 2.0 * sqrt(2.0)
+    func patternStripes(color2: UIColor = .white, barThickness t: CGFloat = 2) -> UIColor {
+        let dim: CGFloat = t * 3.0 * sqrt(2.0)
         
         let img = UIGraphicsImageRenderer(size: .init(width: dim, height: dim)).image { context in
             
             // rotate the context and shift up
             context.cgContext.scaleBy(x: 1, y: -1)
             context.cgContext.rotate(by: CGFloat.pi / 4.0)
-            context.cgContext.translateBy(x: -t, y: -2.0 * t)
+            context.cgContext.translateBy(x: -t, y: -3.0 * t)
             
             let bars: [(UIColor,UIBezierPath)] = [
-                (self,  UIBezierPath(rect: .init(x: -t, y: 0.0, width: dim * 2.0, height: t))),
-                (color2,UIBezierPath(rect: .init(x: 0.0, y: t, width: dim * 2.0, height: t)))
+                (self,  UIBezierPath(rect: .init(x: -t * 2, y: 0.0, width: dim * sqrt(2.0), height: t))),
+                (color2,UIBezierPath(rect: .init(x: -t, y: t, width: dim * sqrt(2.0), height: t))),
+                (color2, UIBezierPath(rect: .init(x: -t, y: 2.0 * t, width: dim * sqrt(2.0), height: t)))
             ]
             
             bars.forEach {  $0.0.setFill(); $0.1.fill() }
             
             // move down and paint again
-            context.cgContext.translateBy(x: -t, y: -2.0 * t)
+            context.cgContext.translateBy(x: -t, y: -3.0 * t)
             bars.forEach {  $0.0.setFill(); $0.1.fill() }
         }
         
@@ -394,8 +395,56 @@ extension UIColor {
 }
 
 extension UIColor {
-    static var appBlue = UIColor(red: 0/255, green: 128/255, blue: 255/255, alpha: 1)
+    static var appBlue: UIColor = {
+        return UIColor { (UITraitCollection: UITraitCollection) -> UIColor in
+            if UITraitCollection.userInterfaceStyle == .dark {
+                /// Return the color for Dark Mode
+                return systemBlue
+            } else {
+                /// Return the color for Light Mode
+                return UIColor(red: 0/255, green: 128/255, blue: 255/255, alpha: 1)
+            }
+        }
+    }()
+    
+    static var appBlueOpacity75: UIColor = {
+        return UIColor { (UITraitCollection: UITraitCollection) -> UIColor in
+            if UITraitCollection.userInterfaceStyle == .dark {
+                /// Return the color for Dark Mode
+                return UIColor.systemBlue.withAlphaComponent(0.75)
+            } else {
+                /// Return the color for Light Mode
+                return UIColor(red: 64/255, green: 160/255, blue: 255/255, alpha: 1)
+            }
+        }
+    }()
+    
+    static var appBlueOpacity50: UIColor = {
+        return UIColor { (UITraitCollection: UITraitCollection) -> UIColor in
+            if UITraitCollection.userInterfaceStyle == .dark {
+                /// Return the color for Dark Mode
+                return UIColor.systemBlue.withAlphaComponent(0.5)
+            } else {
+                /// Return the color for Light Mode
+                return UIColor(red: 128/255, green: 191/255, blue: 255/255, alpha: 1)
+            }
+        }
+    }()
+    
+    static var appBlueOpacity25: UIColor = {
+        return UIColor { (UITraitCollection: UITraitCollection) -> UIColor in
+            if UITraitCollection.userInterfaceStyle == .dark {
+                /// Return the color for Dark Mode
+                return UIColor.systemBlue.withAlphaComponent(0.25)
+            } else {
+                /// Return the color for Light Mode
+                return UIColor(red: 191/255, green: 223/255, blue: 255/255, alpha: 1)
+            }
+        }
+    }()
+    
     static var appRed = UIColor(red: 233/255, green: 52/255, blue: 35/255, alpha: 1)
+    
     static var appGray: UIColor = {
         return UIColor { (UITraitCollection: UITraitCollection) -> UIColor in
             if UITraitCollection.userInterfaceStyle == .dark {
