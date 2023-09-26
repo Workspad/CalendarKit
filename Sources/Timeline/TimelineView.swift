@@ -440,80 +440,68 @@ public final class TimelineView: UIView {
       layoutIfNeeded()
     }
   }
+    
+    private func recalculateEventLayout() {
+        
+        let sortedEvents = self.regularLayoutAttributes.sorted { $0.descriptor.dateInterval.start < $1.descriptor.dateInterval.start }
+        var groupsOfEvents = [[EventLayoutAttributes]]()
+        var overlappingEvents = [EventLayoutAttributes]()
+        
+        for event in sortedEvents {
+            if overlappingEvents.isEmpty {
+                overlappingEvents.append(event)
+                continue
+            }
 
-  private func recalculateEventLayout() {
-
-    // only non allDay events need their frames to be set
-    let sortedEvents = self.regularLayoutAttributes.sorted { (attr1, attr2) -> Bool in
-      let start1 = attr1.descriptor.dateInterval.start
-      let start2 = attr2.descriptor.dateInterval.start
-      return start1 < start2
-    }
-
-    var groupsOfEvents = [[EventLayoutAttributes]]()
-    var overlappingEvents = [EventLayoutAttributes]()
-
-    for event in sortedEvents {
-      if overlappingEvents.isEmpty {
-        overlappingEvents.append(event)
-        continue
-      }
-
-      let longestEvent = overlappingEvents.sorted { (attr1, attr2) -> Bool in
-        var period = attr1.descriptor.dateInterval
-        let period1 = period.end.timeIntervalSince(period.start)
-        period = attr2.descriptor.dateInterval
-        let period2 = period.end.timeIntervalSince(period.start)
-
-        return period1 > period2
+            let longestEvent = overlappingEvents.max(by: { $0.descriptor.dateInterval.duration > $1.descriptor.dateInterval.duration })!
+            
+            if style.eventsWillOverlap {
+                guard let earliestEvent = overlappingEvents.first?.descriptor.dateInterval.start else { continue }
+                let dateInterval = getDateInterval(date: earliestEvent)
+                if event.descriptor.dateInterval.contains(dateInterval.start) {
+                    overlappingEvents.append(event)
+                    continue
+                }
+            } else {
+                guard let lastEvent = overlappingEvents.last else { continue }
+                if (longestEvent.descriptor.dateInterval.intersects(event.descriptor.dateInterval) &&
+                    (longestEvent.descriptor.dateInterval.end != event.descriptor.dateInterval.start || style.eventGap <= 0.0)) ||
+                    (lastEvent.descriptor.dateInterval.intersects(event.descriptor.dateInterval) &&
+                     (lastEvent.descriptor.dateInterval.end != event.descriptor.dateInterval.start || style.eventGap <= 0.0)) ||
+                    (lastEvent.descriptor.dateInterval.duration == 0 && event.descriptor.dateInterval.contains(lastEvent.descriptor.dateInterval.start)) ||
+                    (event.descriptor.dateInterval.duration == 0 && lastEvent.descriptor.dateInterval.contains(event.descriptor.dateInterval.start) && style.eventGap <= 0.0) {
+                    
+                    overlappingEvents.append(event)
+                    continue
+                }
+            }
+            
+            groupsOfEvents.append(overlappingEvents)
+            overlappingEvents = [event]
         }
-        .first!
-
-      if style.eventsWillOverlap {
-        guard let earliestEvent = overlappingEvents.first?.descriptor.dateInterval.start else { continue }
-        let dateInterval = getDateInterval(date: earliestEvent)
-        if event.descriptor.dateInterval.contains(dateInterval.start) {
-          overlappingEvents.append(event)
-          continue
+        
+        groupsOfEvents.append(overlappingEvents)
+        overlappingEvents.removeAll()
+        
+        for overlappingEvents in groupsOfEvents {
+            let totalCount = CGFloat(overlappingEvents.count)
+            
+            for (index, event) in overlappingEvents.enumerated() {
+                let startY = dateToY(event.descriptor.dateInterval.start)
+                let endY = dateToY(event.descriptor.dateInterval.end)
+                
+                let floatIndex = CGFloat(index)
+                var height = endY - startY
+                if height < style.verticalDiff / 4 {
+                    height = style.verticalDiff / 4
+                }
+                
+                let x = style.leadingInset + floatIndex / totalCount * calendarWidth
+                let equalWidth = calendarWidth / totalCount
+                event.frame = CGRect(x: x, y: startY, width: equalWidth, height: height)
+            }
         }
-      } else {
-        let lastEvent = overlappingEvents.last!
-        if (longestEvent.descriptor.dateInterval.intersects(event.descriptor.dateInterval) && (longestEvent.descriptor.dateInterval.end != event.descriptor.dateInterval.start || style.eventGap <= 0.0)) ||
-          (lastEvent.descriptor.dateInterval.intersects(event.descriptor.dateInterval) && (lastEvent.descriptor.dateInterval.end != event.descriptor.dateInterval.start || style.eventGap <= 0.0)) {
-          overlappingEvents.append(event)
-          continue
-        }
-      }
-      groupsOfEvents.append(overlappingEvents)
-      overlappingEvents = [event]
     }
-
-    groupsOfEvents.append(overlappingEvents)
-    overlappingEvents.removeAll()
-
-    for overlappingEvents in groupsOfEvents {
-      let totalCount = CGFloat(overlappingEvents.count)
-      for (index, event) in overlappingEvents.enumerated() {
-        var startY = dateToY(event.descriptor.dateInterval.start)
-        let endY = dateToY(event.descriptor.dateInterval.end)
-        let floatIndex = CGFloat(index)
-          var height = endY - startY
-          // если событие менее 15 минут - отображать высоту view как для 15 минут
-          if height < style.verticalDiff / 4 {
-              height = style.verticalDiff / 4
-          }
-          
-          // если событие длительностью 0 минут - смещаем начало события на половину высоты appointmentZeroView
-          if event.descriptor.dateInterval.duration == 0 {
-              startY = (startY - height / 2) + style.eventGap  
-          }
-
-        let x = style.leadingInset + floatIndex / totalCount * calendarWidth
-        let equalWidth = calendarWidth / totalCount
-        event.frame = CGRect(x: x, y: startY, width: equalWidth, height: height)
-      }
-    }
-  }
 
   private func prepareEventViews() {
     pool.enqueue(views: eventViews)
