@@ -22,6 +22,15 @@ open class AppointmentView: UIView {
         return attributes
     }()
     
+    private lazy var zeroAttributes: Attributes = {
+        let style = NSMutableParagraphStyle()
+        style.lineBreakMode = .byTruncatingTail
+        let attributes = [NSAttributedString.Key.foregroundColor: UIColor.appBlueOpacity75,
+                          NSAttributedString.Key.font: UIFont.systemFont(ofSize: 13, weight: .medium),
+                          NSAttributedString.Key.paragraphStyle: style]
+        return attributes
+    }()
+    
     private lazy var locationAttributes: Attributes = {
         let style = NSMutableParagraphStyle()
         style.paragraphSpacingBefore = 5
@@ -72,9 +81,9 @@ open class AppointmentView: UIView {
     private lazy var containerTextLabel: UILabel = {
         let label = UILabel()
         label.font = UIFont.systemFont(ofSize: 13, weight: .medium)
-        label.textColor = .label
+        label.textColor = .appBlueOpacity75
         label.lineBreakMode = .byTruncatingTail
-        return label  
+        return label
     }()
     
     private lazy var pointView: UIView = {
@@ -106,6 +115,7 @@ open class AppointmentView: UIView {
       
       containerView.addSubview(pointView)
       containerView.addSubview(containerTextLabel)
+      containerView.backgroundColor = .calendarBackground
       self.addSubview(containerView)
       
     for (idx, handle) in eventResizeHandles.enumerated() {
@@ -121,8 +131,10 @@ open class AppointmentView: UIView {
             string: event.text,
             attributes: [.strikethroughStyle: NSUnderlineStyle.single.rawValue]
         )
+        
+        let eventAttributes = isZeroDuration ? zeroAttributes : subjectAttributes
          
-        let attributedSubject = NSAttributedString(string: event.text, attributes: subjectAttributes)
+        let attributedSubject = NSAttributedString(string: event.text, attributes: eventAttributes)
         attributedText.append(event.isCancelledAppointment ? cancelledSubject : attributedSubject)
         
         if let location = event.location {
@@ -131,8 +143,9 @@ open class AppointmentView: UIView {
             attributedText.append(attributedLocation)
         }
         
+        containerTextLabel.attributedText = attributedText
         stactTextLabel.attributedText = attributedText
-        containerTextLabel.text = event.text
+        
         descriptor = event
         
         setupViewStyle(with: CalendarResponse(rawValue: event.responseType),
@@ -395,6 +408,18 @@ extension UIColor {
 }
 
 extension UIColor {
+    static var calendarBackground: UIColor = {
+        return UIColor { (UITraitCollection: UITraitCollection) -> UIColor in
+            if UITraitCollection.userInterfaceStyle == .dark {
+                /// Return the color for Dark Mode
+                return systemGray5
+            } else {
+                /// Return the color for Light Mode
+                return systemBackground
+            }
+        }
+    }()
+    
     static var appBlue: UIColor = {
         return UIColor { (UITraitCollection: UITraitCollection) -> UIColor in
             if UITraitCollection.userInterfaceStyle == .dark {
