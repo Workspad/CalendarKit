@@ -492,6 +492,7 @@ public final class TimelineView: UIView {
                 
                 let floatIndex = CGFloat(index)
                 var height = endY - startY
+                // если событие менее 15 минут - отображать высоту view как для 15 минут
                 if height < style.verticalDiff / 4 {
                     height = style.verticalDiff / 4
                 }
