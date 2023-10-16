@@ -361,8 +361,12 @@ open class AppointmentView: UIView {
         let dashLength: CGFloat = 5
         let betweenDashesSpace: CGFloat = 5
         let dashBorder = CAShapeLayer()
-        dashBorder.removeFromSuperlayer()
+        dashBorder.name = "dashBorder"
         
+        view.layer.sublayers?
+            .filter { $0.name == dashBorder.name }
+            .forEach { $0.removeFromSuperlayer() }
+
         view.layer.cornerRadius = cornerRadius
         view.layer.masksToBounds = true
         
