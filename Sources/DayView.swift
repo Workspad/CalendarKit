@@ -187,9 +187,7 @@ public class DayView: UIView, TimelinePagerViewDelegate, DayHeaderViewDelegate {
             tableView?.isHidden = true
             timelinePagerView.isHidden = true
             NSLayoutConstraint.deactivate([agendaHeightConstraint])
-            NSLayoutConstraint.activate([dayHeightConstraint])
             NSLayoutConstraint.deactivate([dayHeightConstraint])
-            NSLayoutConstraint.activate([agendaHeightConstraint])
         }
     }
     
