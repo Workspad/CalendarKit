@@ -14,9 +14,10 @@ public protocol DayViewDelegate: AnyObject {
     func didMoveHeaderViewToDate(date: Date)
 }
 
-public enum CalendarMode {
-    case agenda
-    case day
+public enum CalendarMode: String {
+    case agenda = "agenda"
+    case day = "day"
+    case week = "week"
 }
 
 public class DayView: UIView, TimelinePagerViewDelegate, DayHeaderViewDelegate {
@@ -170,15 +171,25 @@ public class DayView: UIView, TimelinePagerViewDelegate, DayHeaderViewDelegate {
         dayHeaderView.switchModeTo(calendarMode: calendarMode)
         switch calendarMode {
         case .agenda:
+            dayHeaderView.isHidden = false
             tableView?.isHidden = false
             timelinePagerView.isHidden = true
             NSLayoutConstraint.deactivate([dayHeightConstraint])
             NSLayoutConstraint.activate([agendaHeightConstraint])
         case .day:
+            dayHeaderView.isHidden = false
             tableView?.isHidden = true
             timelinePagerView.isHidden = false
             NSLayoutConstraint.deactivate([agendaHeightConstraint])
             NSLayoutConstraint.activate([dayHeightConstraint])
+        case .week:
+            dayHeaderView.isHidden = true
+            tableView?.isHidden = true
+            timelinePagerView.isHidden = true
+            NSLayoutConstraint.deactivate([agendaHeightConstraint])
+            NSLayoutConstraint.activate([dayHeightConstraint])
+            NSLayoutConstraint.deactivate([dayHeightConstraint])
+            NSLayoutConstraint.activate([agendaHeightConstraint])
         }
     }
     
