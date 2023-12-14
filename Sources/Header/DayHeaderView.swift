@@ -63,6 +63,8 @@ public final class DayHeaderView: UIView, DaySelectorDelegate, DayViewStateUpdat
             swipeLabelView.isHidden = true
         case .day:
             swipeLabelView.isHidden = false
+        case .week:
+            swipeLabelView.isHidden = true
         }
     }
 
