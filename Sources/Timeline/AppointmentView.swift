@@ -25,7 +25,7 @@ open class AppointmentView: UIView {
     private lazy var zeroAttributes: Attributes = {
         let style = NSMutableParagraphStyle()
         style.lineBreakMode = .byTruncatingTail
-        let attributes = [NSAttributedString.Key.foregroundColor: UIColor.appBlueOpacity75,
+        let attributes = [NSAttributedString.Key.foregroundColor: UIColor.acceptColor,
                           NSAttributedString.Key.font: UIFont.systemFont(ofSize: 13, weight: .medium),
                           NSAttributedString.Key.paragraphStyle: style]
         return attributes
@@ -81,7 +81,7 @@ open class AppointmentView: UIView {
     private lazy var containerTextLabel: UILabel = {
         let label = UILabel()
         label.font = UIFont.systemFont(ofSize: 13, weight: .medium)
-        label.textColor = .appBlueOpacity75
+        label.textColor = .acceptColor
         label.lineBreakMode = .byTruncatingTail
         return label
     }()
@@ -328,14 +328,14 @@ open class AppointmentView: UIView {
                                       _ isCancelledAppointment: Bool) -> UIColor {
         if !isCancelledAppointment {
             switch responseType {
-            case .unknown:              return .appBlueOpacity75
-            case .organizer:            return .appBlueOpacity75
-            case .tentative:            return .appBlueOpacity75.patternStripes(color2: .appBlueOpacity50)
-            case .accept:               return .appBlueOpacity75
-            case .decline:              return .appBlueOpacity75
-            case .noResponseReceived:   return .appBlueOpacity25
-            case .requestNotSent:       return .appBlueOpacity25
-            case .none:                 return .appBlueOpacity75
+            case .unknown:              return .acceptColor
+            case .organizer:            return .acceptColor
+            case .tentative:            return .stripesColor.patternStripes()
+            case .accept:               return .acceptColor
+            case .decline:              return .acceptColor
+            case .noResponseReceived:   return .tentativeColor
+            case .requestNotSent:       return .tentativeColor
+            case .none:                 return .acceptColor
             }
         } else {
             return .appGray
@@ -345,7 +345,7 @@ open class AppointmentView: UIView {
     private func setupViewStyle(with responseType: CalendarResponse?,isCancelledAppointment: Bool) {
         backgroundColor = setupBackgroundColor(responseType, isCancelledAppointment)
         color = isZeroDuration ? .clear : setupBackgroundColor(responseType, isCancelledAppointment)
-        stactTextLabel.textColor = responseType == .requestNotSent ? .appRed : .label
+        stactTextLabel.textColor = responseType == .requestNotSent ? .appRed : .stactTextColor
         
         if responseType == .noResponseReceived ||
             responseType == .requestNotSent,
@@ -357,7 +357,7 @@ open class AppointmentView: UIView {
     private func setupDashedBorder(view: UIView) {
         let cornerRadius: CGFloat = 2
         let dashWidth: CGFloat = 2
-        let dashColor: UIColor = .appBlueOpacity75
+        let dashColor: UIColor = .dashBorderColor
         let dashLength: CGFloat = 5
         let betweenDashesSpace: CGFloat = 5
         let dashBorder = CAShapeLayer()
@@ -384,7 +384,7 @@ open class AppointmentView: UIView {
 extension UIColor {
     
     /// make a diagonal striped pattern
-    func patternStripes(color2: UIColor = .white, barThickness t: CGFloat = 2) -> UIColor {
+    func patternStripes(color2: UIColor = .tentativeColor, barThickness t: CGFloat = 2) -> UIColor {
         let dim: CGFloat = t * 3.0 * sqrt(2.0)
         
         let img = UIGraphicsImageRenderer(size: .init(width: dim, height: dim)).image { context in
@@ -392,7 +392,7 @@ extension UIColor {
             // rotate the context and shift up
             context.cgContext.scaleBy(x: 1, y: -1)
             context.cgContext.rotate(by: CGFloat.pi / 4.0)
-            context.cgContext.translateBy(x: -t, y: -3.0 * t)
+            context.cgContext.translateBy(x: -t, y: -3.1 * t)
             
             let bars: [(UIColor,UIBezierPath)] = [
                 (self,  UIBezierPath(rect: .init(x: -t * 2, y: 0.0, width: dim * sqrt(2.0), height: t))),
@@ -412,6 +412,11 @@ extension UIColor {
 }
 
 extension UIColor {
+    static var appRed = UIColor(red: 233/255, green: 52/255, blue: 35/255, alpha: 1)
+    
+    /// Return the color #C7E0F4
+    static var dashBorderColor: UIColor = UIColor(red: 199/255, green: 224/255, blue: 244/255, alpha: 1)
+    
     static var calendarBackground: UIColor = {
         return UIColor { (UITraitCollection: UITraitCollection) -> UIColor in
             if UITraitCollection.userInterfaceStyle == .dark {
@@ -436,44 +441,18 @@ extension UIColor {
         }
     }()
     
-    static var appBlueOpacity75: UIColor = {
+    static var acceptColor: UIColor = {
         return UIColor { (UITraitCollection: UITraitCollection) -> UIColor in
             if UITraitCollection.userInterfaceStyle == .dark {
-                /// Return the color for Dark Mode
-                return UIColor.systemBlue.withAlphaComponent(0.75)
+                /// Return the color for Dark Mode #0086F0
+                return UIColor(red: 0/255, green: 134/255, blue: 240/255, alpha: 1)
             } else {
-                /// Return the color for Light Mode
-                return UIColor(red: 64/255, green: 160/255, blue: 255/255, alpha: 1)
+                /// Return the color for Light Mode #C7E0F4
+                return UIColor(red: 199/255, green: 224/255, blue: 244/255, alpha: 1)
             }
         }
     }()
-    
-    static var appBlueOpacity50: UIColor = {
-        return UIColor { (UITraitCollection: UITraitCollection) -> UIColor in
-            if UITraitCollection.userInterfaceStyle == .dark {
-                /// Return the color for Dark Mode
-                return UIColor.systemBlue.withAlphaComponent(0.5)
-            } else {
-                /// Return the color for Light Mode
-                return UIColor(red: 128/255, green: 191/255, blue: 255/255, alpha: 1)
-            }
-        }
-    }()
-    
-    static var appBlueOpacity25: UIColor = {
-        return UIColor { (UITraitCollection: UITraitCollection) -> UIColor in
-            if UITraitCollection.userInterfaceStyle == .dark {
-                /// Return the color for Dark Mode
-                return UIColor.systemBlue.withAlphaComponent(0.25)
-            } else {
-                /// Return the color for Light Mode
-                return UIColor(red: 191/255, green: 223/255, blue: 255/255, alpha: 1)
-            }
-        }
-    }()
-    
-    static var appRed = UIColor(red: 233/255, green: 52/255, blue: 35/255, alpha: 1)
-    
+        
     static var appGray: UIColor = {
         return UIColor { (UITraitCollection: UITraitCollection) -> UIColor in
             if UITraitCollection.userInterfaceStyle == .dark {
@@ -482,6 +461,42 @@ extension UIColor {
             } else {
                 /// Return the color for Light Mode
                 return .systemGray6
+            }
+        }
+    }()
+
+    static var tentativeColor: UIColor = {
+        return UIColor { (UITraitCollection: UITraitCollection) -> UIColor in
+            if UITraitCollection.userInterfaceStyle == .dark {
+                /// Return the color for Dark Mode #0086F0
+                return UIColor(red: 0/255, green: 134/255, blue: 240/255, alpha: 1)
+            } else {
+                /// Return the color for Light Mode #C7E0F4
+                return UIColor(red: 239/255, green: 246/255, blue: 252/255, alpha: 1)
+            }
+        }
+    }()
+    
+    static var stripesColor: UIColor = {
+        return UIColor { (UITraitCollection: UITraitCollection) -> UIColor in
+            if UITraitCollection.userInterfaceStyle == .dark {
+                /// Return the color for Dark Mode #3AA0F3
+                return UIColor(red: 58/255, green: 160/255, blue: 243/255, alpha: 1)
+            } else {
+                /// Return the color for Light Mode #C7E0F4
+                return UIColor(red: 199/255, green: 224/255, blue: 244/255, alpha: 1)
+            }
+        }
+    }()
+    
+    static var stactTextColor: UIColor = {
+        return UIColor { (UITraitCollection: UITraitCollection) -> UIColor in
+            if UITraitCollection.userInterfaceStyle == .dark {
+                /// Return the color for Dark Mode
+                return .label
+            } else {
+                /// Return the color for Light Mode #004578
+                return UIColor(red: 0/255, green: 69/255, blue: 120/255, alpha: 1)
             }
         }
     }()
