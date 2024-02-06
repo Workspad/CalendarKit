@@ -67,7 +67,7 @@ open class AppointmentView: UIView {
     private lazy var lockImageView: UIImageView = {
         let lockImage = UIImage(systemName: "lock.fill")
         let imageView = UIImageView(image: lockImage)
-        imageView.tintColor = .label
+        imageView.tintColor = .stactTextColor
         return imageView
     }()
    
