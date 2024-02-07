@@ -128,14 +128,14 @@ public final class TimelinePagerView: UIView, UIGestureRecognizerDelegate, UIScr
         self.updateStyleOfTimelineContainer(controller: controller)
       }
     })
-    pagingViewController.view.backgroundColor = style.backgroundColor
+    pagingViewController.view.backgroundColor = SystemColors.systemBackground
   }
 
   private func updateStyleOfTimelineContainer(controller: TimelineContainerController) {
     let container = controller.container
     let timeline = controller.timeline
     timeline.updateStyle(style)
-    container.backgroundColor = style.backgroundColor
+    container.backgroundColor = SystemColors.systemBackground
   }
   
   private func updateEventEditingSnappingBehavior() {

@@ -169,7 +169,7 @@ public final class TimelineView: UIView {
     contentScaleFactor = 1
     layer.contentsScale = 1
     contentMode = .redraw
-    backgroundColor = .white
+    backgroundColor = SystemColors.systemBackground
     addSubview(nowLine)
     
     // Add long press gesture recognizer
@@ -251,7 +251,7 @@ public final class TimelineView: UIView {
         is24hClock = calendar.locale?.uses24hClock() ?? Locale.autoupdatingCurrent.uses24hClock()
     }
     
-    backgroundColor = style.backgroundColor
+    backgroundColor = SystemColors.systemBackground
     setNeedsDisplay()
   }
   

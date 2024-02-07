@@ -82,7 +82,7 @@ public final class SwipeLabelView: UIView, DayViewStateUpdating {
     }
     
     public func updateStyle(_ newStyle: SwipeLabelStyle) {
-        backgroundColor = .tertiarySystemBackground
+        backgroundColor = SystemColors.systemBackground
     }
     
     // MARK: - DayViewStateUpdating
