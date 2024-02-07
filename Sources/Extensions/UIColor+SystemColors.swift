@@ -10,7 +10,9 @@ public enum SystemColors {
     }
     
     public static var systemBackground: UIColor {
-        return .systemBackground
+        /// Пока Pod испольузется только в WorksPad, используем цвета самого WorksPad, уже добавленные при сборке
+        /// При переиспользовании добавить ручки для установки цветовой схемы извне
+        return UIColor(named: "WPXSystemBackgroundColor") ?? .systemBackground
     }
     
     public static var secondarySystemBackground: UIColor {
