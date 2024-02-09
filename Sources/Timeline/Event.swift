@@ -3,6 +3,8 @@ import UIKit
 public final class Event: EventDescriptor {
   public var responseType: Int = 0
   public var isCancelledAppointment: Bool = false
+  public var isBaseCalendar: Bool = false
+  public var organizerStatus: Int = 0
     
   public var dateInterval = DateInterval()
   public var isAllDay = false
