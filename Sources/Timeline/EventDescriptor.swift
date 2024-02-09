@@ -31,3 +31,11 @@ public enum CalendarResponse: Int {
     case noResponseReceived
     case requestNotSent
 }
+
+public enum OrganizerStatus: Int {
+    case free
+    case tentative
+    case busy
+    case OOF
+    case noData
+}
