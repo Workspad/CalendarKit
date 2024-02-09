@@ -13,6 +13,12 @@ open class AppointmentView: UIView {
     private let lockImageSize: CGFloat = 14 
     private let pointSize: CGFloat = 10
     
+    private let dashBorder: CAShapeLayer = {
+            let dashBorder = CAShapeLayer()
+            dashBorder.name = "dashBorder"
+            return dashBorder
+    }()
+    
     private lazy var subjectAttributes: Attributes = {
         let style = NSMutableParagraphStyle()
         style.lineBreakMode = .byTruncatingTail
@@ -149,7 +155,9 @@ open class AppointmentView: UIView {
         descriptor = event
         
         setupViewStyle(with: CalendarResponse(rawValue: event.responseType),
-                       isCancelledAppointment: event.isCancelledAppointment)
+                            isCancelledAppointment: event.isCancelledAppointment,
+                            isBaseCalendar: event.isBaseCalendar,
+                            organizerStatus: event.organizerStatus)
         
         pointView.backgroundColor = event.color
         
@@ -324,8 +332,8 @@ open class AppointmentView: UIView {
     }
   }
     
-    private func setupBackgroundColor(_ responseType: CalendarResponse?,
-                                      _ isCancelledAppointment: Bool) -> UIColor {
+    private func getColorForBaseCalendarEvent(_ responseType: CalendarResponse?,
+                                              _ isCancelledAppointment: Bool) -> UIColor {
         if !isCancelledAppointment {
             switch responseType {
             case .unknown:              return .acceptColor
@@ -342,43 +350,72 @@ open class AppointmentView: UIView {
         }
     }
     
-    private func setupViewStyle(with responseType: CalendarResponse?,isCancelledAppointment: Bool) {
-        backgroundColor = setupBackgroundColor(responseType, isCancelledAppointment)
-        color = isZeroDuration ? .clear : setupBackgroundColor(responseType, isCancelledAppointment)
-        stactTextLabel.textColor = responseType == .requestNotSent ? .appRed : .stactTextColor
-        
-        if responseType == .noResponseReceived ||
-            responseType == .requestNotSent,
-           !isCancelledAppointment {
-            setupDashedBorder(view: self)
+    private func getColorForImportedCalendarEvent(_ organizerStatus: OrganizerStatus) -> UIColor {
+        switch organizerStatus {
+            case .free:                  return .tentativeColor
+            case .tentative:             return .stripesColor.patternStripes()
+            case .busy, .noData:         return .acceptColor
+            case .OOF:                   return .tentativeColor
+        }
+    }
+    
+    private func setupViewStyle(with responseType: CalendarResponse?,
+                                isCancelledAppointment: Bool,
+                                isBaseCalendar: Bool,
+                                organizerStatus: Int) {
+        if isBaseCalendar {
+            /// Цвет события базового календаря зависит от статуса ответа на мероприятие
+            backgroundColor = getColorForBaseCalendarEvent(responseType, isCancelledAppointment)
+            color = isZeroDuration ? .clear : getColorForBaseCalendarEvent(responseType, isCancelledAppointment)
+
+            if responseType == .noResponseReceived || responseType == .requestNotSent,
+               !isCancelledAppointment {
+                setupDashedBorder(view: self)
+            }
+            
+            stactTextLabel.textColor = responseType == .requestNotSent ? .appRed : .stactTextColor
+        } else {
+            /// Цвет события импортированного календаря зависит из статуса занятости организатора
+            let status = OrganizerStatus(rawValue: organizerStatus) ?? .busy
+            backgroundColor = getColorForImportedCalendarEvent(status)
+            color = isZeroDuration ? .clear : getColorForImportedCalendarEvent(status)
+
+            if status == .OOF {
+                setupDashedBorder(view: self)
+            }
+            
+            stactTextLabel.textColor = .stactTextColor
         }
     }
     
     private func setupDashedBorder(view: UIView) {
-        let cornerRadius: CGFloat = 2
-        let dashWidth: CGFloat = 2
-        let dashColor: UIColor = .dashBorderColor
-        let dashLength: CGFloat = 5
-        let betweenDashesSpace: CGFloat = 5
-        let dashBorder = CAShapeLayer()
-        dashBorder.name = "dashBorder"
+            let cornerRadius: CGFloat = 2
+            let dashWidth: CGFloat = 2
+            let dashColor: UIColor = .dashBorderColor
+            let dashLength: CGFloat = 5
+            let betweenDashesSpace: CGFloat = 5
+            
+            resetDashBorder()
+            
+            view.layer.cornerRadius = cornerRadius
+            view.layer.masksToBounds = true
+            
+            dashBorder.lineWidth = dashWidth
+            dashBorder.strokeColor = dashColor.cgColor
+            dashBorder.lineDashPattern = [dashLength, betweenDashesSpace] as [NSNumber]
+            dashBorder.frame = view.bounds
+            dashBorder.fillColor = nil
+            dashBorder.path = UIBezierPath(roundedRect: view.bounds, cornerRadius: cornerRadius).cgPath
+            
+            view.layer.addSublayer(dashBorder)
+        }
         
-        view.layer.sublayers?
-            .filter { $0.name == dashBorder.name }
-            .forEach { $0.removeFromSuperlayer() }
-
-        view.layer.cornerRadius = cornerRadius
-        view.layer.masksToBounds = true
-        
-        dashBorder.lineWidth = dashWidth
-        dashBorder.strokeColor = dashColor.cgColor
-        dashBorder.lineDashPattern = [dashLength, betweenDashesSpace] as [NSNumber]
-        dashBorder.frame = view.bounds
-        dashBorder.fillColor = nil
-        dashBorder.path = UIBezierPath(roundedRect: view.bounds, cornerRadius: cornerRadius).cgPath
-        
-        view.layer.addSublayer(dashBorder)
-    }
+    /// Сбрасываем окантовку для корректного переиспользования CAShapeLayer
+    private func resetDashBorder() {
+            self.layer.sublayers?
+                .filter { $0.name == dashBorder.name }
+                .forEach { $0.removeFromSuperlayer() }
+        }
 }
 
 extension UIColor {
@@ -471,7 +508,7 @@ extension UIColor {
                 /// Return the color for Dark Mode #0086F0
                 return UIColor(red: 0/255, green: 134/255, blue: 240/255, alpha: 1)
             } else {
-                /// Return the color for Light Mode #C7E0F4
+                /// Return the color for Light Mode #EFF6FC
                 return UIColor(red: 239/255, green: 246/255, blue: 252/255, alpha: 1)
             }
         }
