@@ -16,6 +16,8 @@ public protocol EventDescriptor: AnyObject {
   var editedEvent: EventDescriptor? {get set}
   var responseType: Int { get }
   var isCancelledAppointment: Bool { get }
+  var isBaseCalendar: Bool { get }
+  var organizerStatus: Int { get }
   func makeEditable() -> Self
   func commitEditing()
 }
