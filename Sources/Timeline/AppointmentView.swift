@@ -143,7 +143,7 @@ open class AppointmentView: UIView {
         let attributedSubject = NSAttributedString(string: event.text, attributes: eventAttributes)
         attributedText.append(event.isCancelledAppointment ? cancelledSubject : attributedSubject)
         
-        if let location = event.location {
+        if let location = event.location, location != "" {
             let attributedLocation = NSAttributedString(string: location, attributes: locationAttributes)
             attributedText.append(separator)
             attributedText.append(attributedLocation)
@@ -529,8 +529,8 @@ extension UIColor {
     static var stactTextColor: UIColor = {
         return UIColor { (UITraitCollection: UITraitCollection) -> UIColor in
             if UITraitCollection.userInterfaceStyle == .dark {
-                /// Return the color for Dark Mode
-                return .label
+                /// Return the color for Dark Mode #C7E0F4
+                return UIColor(red: 199/255, green: 224/255, blue: 244/255, alpha: 1)
             } else {
                 /// Return the color for Light Mode #004578
                 return UIColor(red: 0/255, green: 69/255, blue: 120/255, alpha: 1)
