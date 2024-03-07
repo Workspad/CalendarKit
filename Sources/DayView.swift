@@ -118,6 +118,16 @@ public class DayView: UIView, TimelinePagerViewDelegate, DayHeaderViewDelegate {
 
   private var style = CalendarStyle()
 
+    private var leadingTableSpace: NSLayoutConstraint! 
+    private var trailingTableSpace: NSLayoutConstraint!
+    private var topTableSpace: NSLayoutConstraint!
+    private var bottomTableSpace: NSLayoutConstraint!
+    
+    private var leadingTimelineSpace: NSLayoutConstraint! 
+    private var trailingTimelineSpace: NSLayoutConstraint!
+    private var topTimelineSpace: NSLayoutConstraint!
+    private var bottomTimelineSpace: NSLayoutConstraint!
+    
   public init(calendar: Calendar = Calendar.autoupdatingCurrent) {
     self.calendar = calendar
     self.dayHeaderView = DayHeaderView(calendar: calendar)
@@ -148,7 +158,7 @@ public class DayView: UIView, TimelinePagerViewDelegate, DayHeaderViewDelegate {
   private func configure() {
     addSubview(timelinePagerView)
     addSubview(dayHeaderView)
-            
+
       agendaHeightConstraint = dayHeaderView.heightAnchor.constraint(equalToConstant: 68)
       dayHeightConstraint = dayHeaderView.heightAnchor.constraint(equalToConstant: 98)
       
@@ -201,28 +211,57 @@ public class DayView: UIView, TimelinePagerViewDelegate, DayHeaderViewDelegate {
             agendaHeightConstraint
         ])
     }
-    
+
     private func layoutTableView() {
         guard let tableView = tableView else { return }
+        
         tableView.translatesAutoresizingMaskIntoConstraints = false
         
+        if let leadingTableSpace, let trailingTableSpace, let topTableSpace, let bottomTableSpace {
+            NSLayoutConstraint.deactivate([
+                leadingTableSpace,
+                trailingTableSpace,
+                topTableSpace,
+                bottomTableSpace
+            ])
+        }
+        
+        leadingTableSpace = tableView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: horizontalSpacing)
+        trailingTableSpace = tableView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -horizontalSpacing)
+        topTableSpace = tableView.topAnchor.constraint(equalTo: dayHeaderView.bottomAnchor)
+        bottomTableSpace = tableView.bottomAnchor.constraint(equalTo: bottomAnchor)
+        
         NSLayoutConstraint.activate([
-            tableView.topAnchor.constraint(equalTo: dayHeaderView.bottomAnchor),
-            tableView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: horizontalSpacing),
-            tableView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -horizontalSpacing),
-            tableView.bottomAnchor.constraint(equalTo: bottomAnchor)
+            leadingTableSpace, 
+            trailingTableSpace,
+            topTableSpace,
+            bottomTableSpace
         ])
     }
     
     private func layoutTimelinePagerView() {
         timelinePagerView.translatesAutoresizingMaskIntoConstraints = false
         
-        NSLayoutConstraint.activate([
-            timelinePagerView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: horizontalSpacing),
-            timelinePagerView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -horizontalSpacing),
-            timelinePagerView.topAnchor.constraint(equalTo: dayHeaderView.bottomAnchor),
-            timelinePagerView.bottomAnchor.constraint(equalTo: bottomAnchor)
+        if let leadingTimelineSpace, let trailingTimelineSpace, let topTimelineSpace, let bottomTimelineSpace {
+            NSLayoutConstraint.deactivate([
+                leadingTimelineSpace,
+                trailingTimelineSpace,
+                topTimelineSpace,
+                bottomTimelineSpace
             ])
+        }
+        
+        leadingTimelineSpace = timelinePagerView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: horizontalSpacing)
+        trailingTimelineSpace = timelinePagerView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -horizontalSpacing)
+        topTimelineSpace = timelinePagerView.topAnchor.constraint(equalTo: dayHeaderView.bottomAnchor)
+        bottomTimelineSpace = timelinePagerView.bottomAnchor.constraint(equalTo: bottomAnchor)
+        
+        NSLayoutConstraint.activate([
+            leadingTimelineSpace,
+            trailingTimelineSpace,
+            topTimelineSpace,
+            bottomTimelineSpace
+        ])
     }
   
   public func updateStyle(_ newStyle: CalendarStyle) {
