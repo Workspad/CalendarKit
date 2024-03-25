@@ -442,66 +442,27 @@ public final class TimelineView: UIView {
   }
     
     private func recalculateEventLayout() {
+        // Берем все события
+        let dayEvents = self.regularLayoutAttributes
         
-        let sortedEvents = self.regularLayoutAttributes.sorted { $0.descriptor.dateInterval.start < $1.descriptor.dateInterval.start }
-        var groupsOfEvents = [[EventLayoutAttributes]]()
-        var overlappingEvents = [EventLayoutAttributes]()
-        
-        for event in sortedEvents {
-            if overlappingEvents.isEmpty {
-                overlappingEvents.append(event)
-                continue
-            }
+        // Создаем массив событий с пересечениями
+        var overlappedEvents: [EventLayoutAttributes] = []
 
-            let longestEvent = overlappingEvents.max(by: { $0.descriptor.dateInterval.duration > $1.descriptor.dateInterval.duration })!
-            
-            if style.eventsWillOverlap {
-                guard let earliestEvent = overlappingEvents.first?.descriptor.dateInterval.start else { continue }
-                let dateInterval = getDateInterval(date: earliestEvent)
-                if event.descriptor.dateInterval.contains(dateInterval.start) {
-                    overlappingEvents.append(event)
-                    continue
-                }
+        dayEvents.forEach { dayEvent in
+            // Если у события есть пересечения, добавляем его в массив, чтобы позже рассчитать фреймы
+            if doesEventOverlap(event: dayEvent, existingEvents: dayEvents) {
+                overlappedEvents.append(dayEvent)
             } else {
-                guard let lastEvent = overlappingEvents.last else { continue }
-                if (longestEvent.descriptor.dateInterval.intersects(event.descriptor.dateInterval) &&
-                    (longestEvent.descriptor.dateInterval.end != event.descriptor.dateInterval.start || style.eventGap <= 0.0)) ||
-                    (lastEvent.descriptor.dateInterval.intersects(event.descriptor.dateInterval) &&
-                     (lastEvent.descriptor.dateInterval.end != event.descriptor.dateInterval.start || style.eventGap <= 0.0)) ||
-                    (lastEvent.descriptor.dateInterval.duration == 0 && event.descriptor.dateInterval.contains(lastEvent.descriptor.dateInterval.start)) ||
-                    (event.descriptor.dateInterval.duration == 0 && lastEvent.descriptor.dateInterval.contains(event.descriptor.dateInterval.start) && style.eventGap <= 0.0) {
-                    
-                    overlappingEvents.append(event)
-                    continue
-                }
-            }
-            
-            groupsOfEvents.append(overlappingEvents)
-            overlappingEvents = [event]
-        }
-        
-        groupsOfEvents.append(overlappingEvents)
-        overlappingEvents.removeAll()
-        
-        for overlappingEvents in groupsOfEvents {
-            let totalCount = CGFloat(overlappingEvents.count)
-            
-            for (index, event) in overlappingEvents.enumerated() {
-                let startY = dateToY(event.descriptor.dateInterval.start)
-                let endY = dateToY(event.descriptor.dateInterval.end)
-                
-                let floatIndex = CGFloat(index)
-                var height = endY - startY
-                // если событие менее 15 минут - отображать высоту view как для 15 минут
-                if height < style.verticalDiff / 4 {
-                    height = style.verticalDiff / 4
-                }
-                
-                let x = style.leadingInset + floatIndex / totalCount * calendarWidth
-                let equalWidth = calendarWidth / totalCount
-                event.frame = CGRect(x: x, y: startY, width: equalWidth, height: height)
+                // Если пересечений нет, то сразу рассчитываем фрейм события
+                dayEvent.frame = frameForSeparatedEvent(dayEvent)
             }
         }
+        
+        // Считаем количество колонок — оно равно максимальному количеству пересечений в одно время
+        let groupCount = getMaxIntersectionsCountFromEvents(overlappedEvents)
+        
+        // Распределяем пересекающиеся события в колонки и считаем их фреймы
+        distributeEventsToGroups(overlappedEvents, into: groupCount)
     }
 
   private func prepareEventViews() {
@@ -579,4 +540,121 @@ public final class TimelineView: UIView {
     let endRange = calendar.date(byAdding: .minute, value: splitMinuteInterval, to: beginningRange)!
     return DateInterval(start: beginningRange, end: endRange)
   }
+   
+    // MARK: - Calendar Grid Helpers
+    
+    // Функция для распределения пересекающихся событий в вертикальные колонки и подсчёта фреймов
+    private func distributeEventsToGroups(_ events: [EventLayoutAttributes], into numberOfGroups: Int) -> [[EventLayoutAttributes]] {
+        let events = events.sorted { $0.descriptor.dateInterval.start > $1.descriptor.dateInterval.start }
+        let width = calendarWidth / CGFloat(numberOfGroups)
+        
+        // Создаем несколько пустых массивов — это колонки для событий
+        var groups = Array(repeating: [EventLayoutAttributes](), count: numberOfGroups)
+        
+        // Берем каждое событие и заполняем массивы
+        for event in events.sorted(by: { $0.descriptor.dateInterval.start < $1.descriptor.dateInterval.end }) {
+            var added = false
+            
+            // Проходимся во всем массивам и смотрим, нет ли пересечений у текущего события с другими в нём до первого подходящего
+            for index in 0..<groups.count {
+                if !groups[index].contains(where: { $0.descriptor.dateInterval.intersects(event.descriptor.dateInterval) }) {
+                    // При успехе добавляем в массив, считаем размер и фрейм вью
+                    event.frame = frameForOverlappedEvent(event, index: index, width: width)
+                    groups[index].append(event)
+                    added = true
+                    break
+                } else if !doesEventOverlap(event: event, existingEvents: groups[index]) {
+                    // Дополнительно после проверяем кейс событий стык в стык (конец одного = начало другого)
+                    event.frame = frameForOverlappedEvent(event, index: index, width: width)
+                    groups[index].append(event)
+                    added = true
+                    break
+                }
+            }
+            if !added {
+                // Если событие по времени пересекается со всеми событиями всех групп, оно не добавляется
+                continue
+            }
+        }
+        
+        return groups
+    }
+    
+    // Функция для вычисления максимального количества пересечений
+    private func getMaxIntersectionsCountFromEvents(_ events: [EventLayoutAttributes]) -> Int {
+        var intervals = [DateInterval]()
+        events.forEach { event in
+            intervals.append(event.descriptor.dateInterval)
+        }
+        
+        // Создаем массив всех начал и концов интервалов с метками
+        let points = intervals.flatMap { interval -> [(Date, Bool)] in
+            return [(interval.start, false), (interval.end, true)]
+        }
+        
+        // Сортируем точки по дате, при равенстве сначала конец интервала
+        let sortedPoints = points.sorted {
+            $0.0 == $1.0 ? $0.1 && !$1.1 : $0.0 < $1.0
+        }
+        
+        var maxIntersections = 0
+        var currentIntersections = 0
+        
+        // Проходим по отсортированным точкам и считаем пересечения
+        for point in sortedPoints {
+            if point.1 {
+                currentIntersections -= 1
+            } else {
+                currentIntersections += 1
+                maxIntersections = max(maxIntersections, currentIntersections)
+            }
+        }
+        
+        return maxIntersections
+    }
+    
+    // Функция для проверки пересечений у события
+    private func doesEventOverlap(event: EventLayoutAttributes, existingEvents: [EventLayoutAttributes]) -> Bool {
+        for existingEvent in existingEvents {
+            let dublicate = (event.descriptor.text == existingEvent.descriptor.text) && (event.descriptor.dateInterval == existingEvent.descriptor.dateInterval)
+            if event.descriptor.dateInterval.start < existingEvent.descriptor.dateInterval.end && event.descriptor.dateInterval.end > existingEvent.descriptor.dateInterval.start && !dublicate {
+                return true
+            }
+        }
+        return false
+    }
+    
+    // Расчет фрейма для отдельного события
+    private func frameForSeparatedEvent(_ event: EventLayoutAttributes) -> CGRect {
+        let startY = dateToY(event.descriptor.dateInterval.start)
+        let endY = dateToY(event.descriptor.dateInterval.end)
+        var height = endY - startY
+        
+        // если событие менее 15 минут - отображать высоту view как для 15 минут
+        if height < style.verticalDiff / 4 {
+            height = style.verticalDiff / 4
+        }
+        
+        let width = calendarWidth
+        let startX = style.leadingInset
+        let frame = CGRect(x: startX, y: startY, width: width, height: height)
+        return frame
+    }
+    
+    // Расчет фрейма для пересекающегося события
+    private func frameForOverlappedEvent(_ event: EventLayoutAttributes, index: Int, width: CGFloat) -> CGRect {
+        let startY = dateToY(event.descriptor.dateInterval.start)
+        let endY = dateToY(event.descriptor.dateInterval.end)
+        var height = endY - startY
+        
+        // если событие менее 15 минут - отображать высоту view как для 15 минут
+        if height < style.verticalDiff / 4 {
+            height = style.verticalDiff / 4
+        }
+    
+        let floatIndex = CGFloat(index)
+        let startX = style.leadingInset + floatIndex * width
+        let frame = CGRect(x: startX, y: startY, width: width, height: height)
+        return frame
+    }
 }
