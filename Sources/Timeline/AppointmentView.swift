@@ -155,9 +155,11 @@ open class AppointmentView: UIView {
         descriptor = event
         
         setupViewStyle(with: CalendarResponse(rawValue: event.responseType),
-                            isCancelledAppointment: event.isCancelledAppointment,
-                            isBaseCalendar: event.isBaseCalendar,
-                            organizerStatus: event.organizerStatus)
+                       isCancelledAppointment: event.isCancelledAppointment,
+                       isBaseCalendar: event.isBaseCalendar,
+                       organizerStatus: event.organizerStatus,
+                       hasFullAccess: event.hasFullAccess
+        )
         
         pointView.backgroundColor = event.color
         
@@ -362,9 +364,11 @@ open class AppointmentView: UIView {
     private func setupViewStyle(with responseType: CalendarResponse?,
                                 isCancelledAppointment: Bool,
                                 isBaseCalendar: Bool,
-                                organizerStatus: Int) {
-        if isBaseCalendar {
-            /// Цвет события базового календаря зависит от статуса ответа на мероприятие
+                                organizerStatus: Int,
+                                hasFullAccess: Bool) {
+        /// Для базового календаря или расшаренного с полными правами (представитель, редактор, полные сведения)
+        if isBaseCalendar || (!isBaseCalendar && hasFullAccess) {
+            /// Цвет события зависит от статуса ответа на мероприятие
             backgroundColor = getColorForBaseCalendarEvent(responseType, isCancelledAppointment)
             color = isZeroDuration ? .clear : getColorForBaseCalendarEvent(responseType, isCancelledAppointment)
 
@@ -375,7 +379,8 @@ open class AppointmentView: UIView {
             
             stactTextLabel.textColor = responseType == .requestNotSent ? .appRed : .stactTextColor
         } else {
-            /// Цвет события импортированного календаря зависит из статуса занятости организатора
+            /// Для расшаренного календаря с краткими правами (краткие сведения, только доступность)
+            /// Цвет события зависит из статуса занятости организатора
             let status = OrganizerStatus(rawValue: organizerStatus) ?? .busy
             backgroundColor = getColorForImportedCalendarEvent(status)
             color = isZeroDuration ? .clear : getColorForImportedCalendarEvent(status)
