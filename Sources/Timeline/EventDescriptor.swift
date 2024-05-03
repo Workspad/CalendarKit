@@ -19,6 +19,7 @@ public protocol EventDescriptor: AnyObject {
   var isBaseCalendar: Bool { get }
   var organizerStatus: Int { get }
   var hasFullAccess: Bool { get }
+  var calendarColor: UIColor { get }
   func makeEditable() -> Self
   func commitEditing()
 }
