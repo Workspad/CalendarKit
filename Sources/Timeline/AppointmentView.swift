@@ -73,7 +73,6 @@ open class AppointmentView: UIView {
     private lazy var lockImageView: UIImageView = {
         let lockImage = UIImage(systemName: "lock.fill")
         let imageView = UIImageView(image: lockImage)
-        imageView.tintColor = .stactTextColor
         return imageView
     }()
    
@@ -334,6 +333,7 @@ open class AppointmentView: UIView {
     }
   }
     
+    /// Базовый
     private func getColorForBaseCalendarEvent(_ responseType: CalendarResponse?,
                                               _ isCancelledAppointment: Bool) -> UIColor {
         if !isCancelledAppointment {
@@ -352,12 +352,33 @@ open class AppointmentView: UIView {
         }
     }
     
+    /// Расшаренный, краткие права
     private func getColorForImportedCalendarEvent(_ organizerStatus: OrganizerStatus) -> UIColor {
+        let calendarColor = descriptor?.calendarColor ?? .appBlue
         switch organizerStatus {
-            case .free:                  return .tentativeColor
-            case .tentative:             return .stripesColor.patternStripes()
-            case .busy, .noData:         return .acceptColor
-            case .OOF:                   return .tentativeColor
+        case .free, .OOF:               return calendarColor.withAlphaComponent(0.5)
+        case .tentative:                return calendarColor.patternStripes(color2: calendarColor.withAlphaComponent(0.7))
+        case .busy, .noData:            return calendarColor
+        }
+    }
+    
+    /// Расшаренный, полные права
+    private func getColorForImportedCalendarEvent(_ responseType: CalendarResponse?,
+                                                  _ isCancelledAppointment: Bool) -> UIColor {
+        let calendarColor = descriptor?.calendarColor ?? .appBlue
+        if !isCancelledAppointment {
+            switch responseType {
+            case .unknown:              return calendarColor
+            case .organizer:            return calendarColor
+            case .tentative:            return calendarColor.patternStripes(color2: calendarColor.withAlphaComponent(0.7))
+            case .accept:               return calendarColor
+            case .decline:              return calendarColor
+            case .noResponseReceived:   return calendarColor.withAlphaComponent(0.5)
+            case .requestNotSent:       return calendarColor.withAlphaComponent(0.5)
+            case .none:                 return calendarColor
+            }
+        } else {
+            return .appGray
         }
     }
     
@@ -366,9 +387,10 @@ open class AppointmentView: UIView {
                                 isBaseCalendar: Bool,
                                 organizerStatus: Int,
                                 hasFullAccess: Bool) {
-        /// Для базового календаря или расшаренного с полными правами (представитель, редактор, полные сведения)
-        if isBaseCalendar || (!isBaseCalendar && hasFullAccess) {
+        if isBaseCalendar {
+            /// Для базового календаря
             /// Цвет события зависит от статуса ответа на мероприятие
+            
             backgroundColor = getColorForBaseCalendarEvent(responseType, isCancelledAppointment)
             color = isZeroDuration ? .clear : getColorForBaseCalendarEvent(responseType, isCancelledAppointment)
 
@@ -376,11 +398,24 @@ open class AppointmentView: UIView {
                !isCancelledAppointment {
                 setupDashedBorder(view: self)
             }
-            
             stactTextLabel.textColor = responseType == .requestNotSent ? .appRed : .stactTextColor
+            lockImageView.tintColor = .stactTextColor
+        } else if !isBaseCalendar && hasFullAccess {
+            /// Для расшаренного с полными правами (представитель, редактор, полные сведения)
+            /// Цвет события зависит от статуса ответа на мероприятие + цвет календаря
+        
+            backgroundColor = getColorForImportedCalendarEvent(responseType, isCancelledAppointment)
+            color = isZeroDuration ? .clear : getColorForImportedCalendarEvent(responseType, isCancelledAppointment)
+            
+            if responseType == .noResponseReceived || responseType == .requestNotSent,
+               !isCancelledAppointment {
+                setupDashedBorder(view: self)
+            }
+            setupWhiteTextAndLockColor()
         } else {
             /// Для расшаренного календаря с краткими правами (краткие сведения, только доступность)
-            /// Цвет события зависит из статуса занятости организатора
+            /// Цвет события зависит из статуса занятости организатора  + цвет календаря
+
             let status = OrganizerStatus(rawValue: organizerStatus) ?? .busy
             backgroundColor = getColorForImportedCalendarEvent(status)
             color = isZeroDuration ? .clear : getColorForImportedCalendarEvent(status)
@@ -388,15 +423,27 @@ open class AppointmentView: UIView {
             if status == .OOF {
                 setupDashedBorder(view: self)
             }
-            
-            stactTextLabel.textColor = .stactTextColor
+            setupWhiteTextAndLockColor()
         }
+    }
+        
+    private func setupWhiteTextAndLockColor(color: UIColor = .white.withAlphaComponent(0.9)) {
+        stactTextLabel.textColor = color
+        lockImageView.tintColor = color
+    }
+    
+    private func getDashBorderColor() -> UIColor {
+        guard let descriptor = descriptor else {
+            return .dashBorderColor
+        }
+        let color = descriptor.isBaseCalendar ? .dashBorderColor : descriptor.calendarColor
+        return color
     }
     
     private func setupDashedBorder(view: UIView) {
             let cornerRadius: CGFloat = 2
             let dashWidth: CGFloat = 2
-            let dashColor: UIColor = .dashBorderColor
+            let dashColor: UIColor = getDashBorderColor()
             let dashLength: CGFloat = 5
             let betweenDashesSpace: CGFloat = 5
             

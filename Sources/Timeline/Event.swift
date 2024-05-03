@@ -6,6 +6,7 @@ public final class Event: EventDescriptor {
   public var isBaseCalendar: Bool = false
   public var hasFullAccess: Bool = false
   public var organizerStatus: Int = 0
+  public var calendarColor: UIColor = .clear
     
   public var dateInterval = DateInterval()
   public var isAllDay = false
